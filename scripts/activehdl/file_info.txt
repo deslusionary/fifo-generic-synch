@@ -1,0 +1,3 @@
+fifo_generic.sv,systemverilog,xil_defaultlib,../../src/fifo_generic.sv,
+fifo_tb.sv,systemverilog,xil_defaultlib,../../sim/fifo_tb.sv,
+glbl.v,Verilog,xil_defaultlib,glbl.v
