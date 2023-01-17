@@ -1,0 +1,15 @@
+[options]
+mode prove
+vcd on
+
+[engines]
+smtbmc --progress
+
+[script]
+read -sv -formal -DFORMAL fifo_generic.sv 
+prep -top fifo_generic
+
+[files]
+./src/fifo_generic.sv 
+
+# comments

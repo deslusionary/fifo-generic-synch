@@ -1,0 +1,6 @@
+# ignore build directory and everything in it
+build/*
+.Xil/
+
+# Ignore SymbiYosys working directory
+sim/fifo_generic/*
