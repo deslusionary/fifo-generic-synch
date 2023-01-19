@@ -106,6 +106,9 @@ module fifo_generic #(
 `ifdef FORMAL
 
     logic past_valid;
+    integer fifo_count = 0;
+    logic [mem_addr_width : 0] pointer_diff;
+
     initial begin 
         past_valid = 0;
         i_rst = 1;
@@ -117,35 +120,68 @@ module fifo_generic #(
         if (!i_rst) past_valid <= 1;
     end
 
-    // Require inputs to change on posedge clock
-    
-    integer count = 0;
-    integer num_reads = 0;
-    integer num_writes = 0;
-    
-    always @(posedge clk) begin
-        if (past_valid && write_ptr != $past(write_ptr)) begin
-            num_writes <= num_writes + 1'b1;
+    // calculate number of items in FIFO by counting reads and writes
+    always_ff @(posedge clk) begin
+        if (i_rst) fifo_count <= 0;
+        else if (write_en && !read_en && fifo_count < FifoDepth) begin
+            fifo_count <= fifo_count + 1'b1;
         end
-        if (i_rst) num_writes <= 0;
-        //$display("num_writes: %d", num_writes);
-    end
-    
-    always @(posedge clk) begin
-        if (past_valid && read_ptr != $past(read_ptr)) begin
-            num_reads <= num_reads + 1'b1;
+        else if (!write_en && read_en && fifo_count > 0) begin
+            fifo_count <= fifo_count - 1'b1;
         end
-        if (i_rst) num_reads <= 0; 
-        //$display("num_reads: %d", num_reads);
     end
-    
-    // Assert that the number of writes never exceeds number of reads
-    // or vice versa
+
+    // generate number of items in FIFO from pointer addresses
     always_comb begin
-        count = num_writes - num_reads;
-        assert (count < FifoDepth || count == FifoDepth);
-        assert (count > 0 || count == 0);
+        if (read_ptr < write_ptr || read_ptr == write_ptr) pointer_diff <= write_ptr - read_ptr;
+        else pointer_diff <= (2 * FifoDepth) + write_ptr - read_ptr;
     end
+
+    // Test Cases
+    always_ff @(posedge clk) begin
+
+        if (past_valid) begin
+            fifo_count_inc : assert(fifo_count == $past(fifo_count) + 1'b1 
+                                    || fifo_count == $past(fifo_count) - 1'b1
+                                    || fifo_count == $past(fifo_count)
+                                    || fifo_count == 0);
+
+            fifo_items: assert(fifo_count == pointer_diff);
+
+            number_items: assert(fifo_count < FifoDepth || fifo_count == FifoDepth);
+
+            read_ptr_inc: assert(read_ptr == $past(read_ptr)
+                                || read_ptr == $past(read_ptr) + 1'b1);
+
+            write_ptr_inc: assert(write_ptr == $past(write_ptr)
+                                  || write_ptr == $past(write_ptr) + 1'b1);
+            
+            // Underflow proofs
+            if (i_read && fifo_count == 0) underflow_read_en: assert(read_en == 1'b0);
+            
+            // Test that read pointer does not increment if a read
+            // while FIFO is empty is attempted
+            if ($past(i_read) && $past(fifo_count) == 0) begin
+                underflow_read_ptr: assert(read_ptr == $past(read_ptr));
+            end
+
+            // Overflow proofs
+            if (i_write && fifo_count == FifoDepth) begin
+                overflow_write_en: assert(write_en == 1'b0);
+            end
+
+            if ($past(i_write) && $past(fifo_count) == FifoDepth) begin
+                overflow_write_ptr: assert(write_ptr == $past(write_ptr));
+            end
+
+            cover_read_write: cover(i_write && i_read && fifo_count == FifoDepth);
+            cover (o_empty == o_full);
+
+
+            if (fifo_count == FifoDepth) full: assert(o_full == 1'b1);
+            if (fifo_count == 0) empty: assert(o_empty == 1'b1);
+        end
+    end         
     
     // Do some assertion checks
     // assert property (@(posedge clk) disable iff (i_rst) ($rose(i_write) |=> !o_empty)) $display("assertion passed");
