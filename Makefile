@@ -57,7 +57,11 @@ $(BUILD_DIR)/post_synth.dcp: ./src/fifo_generic.sv
 
 ### Simulation ###
 xsim: 
-	vivado -source $(SCRIPT_SRC)/sim.tcl $(call VIVADO_FLAGS,sim)
+	vivado -source $(SCRIPT_SRC)/sim.tcl $(call VIVADO_FLAGS,sim) &
+
+.PHONY: formal
+formal:
+	sby -d ./sim/output -f sim/fifo_generic.sby
 
 ### Maintenance ###
 .phony:

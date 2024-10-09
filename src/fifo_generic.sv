@@ -22,7 +22,7 @@
 
 module fifo_generic #(
     parameter DataWidth = 32, 
-    parameter int unsigned FifoDepth = 1024 // power of 2 FIFO depths only
+    parameter int unsigned FifoDepth = 8 // power of 2 FIFO depths only
     ) (
     input logic                    clk,
     input logic                    i_rst,
@@ -180,6 +180,10 @@ module fifo_generic #(
 
             if (fifo_count == FifoDepth) full: assert(o_full == 1'b1);
             if (fifo_count == 0) empty: assert(o_empty == 1'b1);
+
+            tests_cover_prop: cover property (o_full == o_empty);
+            cover_full: cover property (o_full);
+            //test_cover: cover (o_full == o_empty);
         end
     end         
     

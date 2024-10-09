@@ -6,7 +6,7 @@ vcd on
 smtbmc --progress
 
 [script]
-read -sv -formal -DFORMAL fifo_generic.sv 
+read -sv -formal fifo_generic.sv 
 prep -top fifo_generic
 
 [files]
